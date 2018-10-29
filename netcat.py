@@ -3,6 +3,7 @@ import socket
 import getopt
 import threading
 import subprocess
+from docopt import docopt
 
 listen = False
 command = False
@@ -12,24 +13,6 @@ target = ""
 opts = ""
 upload_destination = ""
 port = 0
-
-
-def usage():
-    print("BHP NetCat Tool")
-    print(" ")
-    print("Usage: netcat.py -t target_host -p port")
-    print("-l --listen              - listen on [host]:[port] for incoming connections")
-    print("-e --execute=file_to_run - execute the given file upon receiving a connection")
-    print("-c --command             - initialize a command shell")
-    print("-u --upload=destination  - upon receiving connection upload a file and write to [destination]")
-    print(" ")
-    print(" ")
-    print("Examples: ")
-    print("netcat.py -t 192.168.0.1 -p 5555 -l -c")
-    print("netcat.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe")
-    print("netcat.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\"")
-    print("echo 'ABCDEFGHI' | ./netcat.py -t 192.168.11.12 -p 135")
-    sys.exit(0)
 
 
 def client_handler(client_socket):
@@ -92,34 +75,49 @@ def main():
     global upload_destination
     global target
     global opts
+    usage_text = """
+    BHP NetCat Tool
 
-    if not len(sys.argv[1:]):
-        usage()
+    Usage:
+    	netcat.py -t <target_host> -p <port>
+    	netcat.py -t <target_host> -p <port> -l
+    	netcat.py -t <target_host> -p <port> -l [-c | -u <upload_path> | -e <exec_command>]
 
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu",
-                                   ["help", "listen", "execute", "target", "port", "command", "upload"])
-    except getopt.GetoptError as err:
-        print(str(err))
-        usage()
+    Options:
+      -t --target=target_host
+      -p --port=network_port 
+      -l --listen               - listen on [host]:[port] for incoming connections
+      -e --execute=file_to_run  - execute the given file upon receiving a connection
+      -c --commandshell         - initialize a command shell
+      -u --upload=destination   - upon receiving connection upload a file and write to [destination]
+                              ^^ at least two spaces in here to not fuck up parser
+                                 usage: https://github.com/docopt/docopt#option-descriptions-format
 
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-        elif opt in ("-l", "--listen"):
-            listen = True
-        elif opt in ("-e", "--execute"):
-            execute = arg
-        elif opt in ("-c", "--commandshell"):
-            command = True
-        elif opt in ("-u", "--upload"):
-            upload_destination = arg
-        elif opt in ("-t", "--target"):
-            target = arg
-        elif opt in ("-p", "--port"):
-            port = int(arg)
-        else:
-            assert False, "Unhandled Option"
+    Examples:
+      netcat.py -t 192.168.0.1 -p 5555 -l -c
+      netcat.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe
+      netcat.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\"
+      echo 'ABCDEFGHI' | ./netcat.py -t 192.168.11.12 -p 135
+    """
+
+    arguments = docopt(usage_text)
+
+    # print(arguments)
+    # sys.exit()
+    # {'--commandshell': False,
+    #  '--execute': None,
+    #  '--listen': True,
+    #  '--port': '222',
+    #  '--target': '111',
+    #  '--upload': '333'}
+
+    listen = arguments['--listen']
+    execute = arguments['--execute']
+    command = arguments['--commandshell']
+    upload_destination = arguments['--upload']
+    target = arguments['--target']
+    port = int(arguments['--port'])
+
 
     if not listen and len(target) and port > 0:
         buffer = sys.stdin.read()
